@@ -5,6 +5,7 @@ import { InvalidEnumFilterError } from "./modules/registry/status-registry";
 import { registerDataRoutes } from "./routes/data";
 import { registerHealthRoutes } from "./routes/health";
 import { registerMetaRoutes } from "./routes/meta";
+import { registerRulesRoutes } from "./routes/rules";
 
 interface BuildAppOptions {
   env: AppEnv;
@@ -55,10 +56,12 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
         "/meta/database",
         "/meta/contracts",
         "/meta/registry",
+        "/meta/runtime-modules",
         "/v1/suppliers",
         "/v1/products",
         "/v1/orders",
-        "/v1/exceptions"
+        "/v1/exceptions",
+        "/v1/rules/evaluate"
       ]
     };
   });
@@ -66,6 +69,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   void registerHealthRoutes(app, options);
   void registerMetaRoutes(app);
   void registerDataRoutes(app, options);
+  void registerRulesRoutes(app);
 
   return app;
 }

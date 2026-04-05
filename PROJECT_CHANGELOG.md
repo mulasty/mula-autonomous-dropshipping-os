@@ -20,3 +20,5 @@ Record repository-level changes that affect navigation, canonical structure, or 
 - added `app/backend` as a thin TypeScript and Fastify service over repository metadata and PostgreSQL tables
 - introduced health, metadata, and read-only data routes with safe `503` behavior when `DATABASE_URL` is missing
 - synchronized backend registry definitions with SQL enum/status constraints and added normalized status-filter handling
+- started Phase 2 runtime implementation with a deterministic rules-engine module and evaluation endpoint
+- added Phase 3 runtime scaffolding with shared primitives plus supplier intake, qualification, and order-routing modules

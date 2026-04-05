@@ -29,10 +29,12 @@ Copy values from `.env.example` and set at minimum:
 - `GET /meta/database`
 - `GET /meta/contracts`
 - `GET /meta/registry`
+- `GET /meta/runtime-modules`
 - `GET /v1/suppliers`
 - `GET /v1/products`
 - `GET /v1/orders`
 - `GET /v1/exceptions`
+- `POST /v1/rules/evaluate`
 
 ## Current design
 - metadata routes read the real repository contracts and SQL assets
@@ -40,6 +42,9 @@ Copy values from `.env.example` and set at minimum:
 - data routes are read-only and intentionally thin
 - database-backed routes fail safely with `503` when `DATABASE_URL` is not configured
 - enum-like filters normalize case, spaces, and hyphens before validation
+- rules engine route supports deterministic phase-2 qualification checks without needing database writes yet
+- shared runtime primitives now exist for results, events, logging, config, and exceptions
+- phase-3 runtime modules are present for supplier intake, qualification, and order routing
 
 ## Next backend steps
 - add typed repository layer per domain

@@ -1,5 +1,6 @@
 import { env } from "./config/env";
 import { PostgresDatabase } from "./db/postgres";
+import { runtimeModuleCatalog } from "./modules";
 import { buildApp } from "./app";
 
 async function main(): Promise<void> {
@@ -23,6 +24,13 @@ async function main(): Promise<void> {
     host: env.host,
     port: env.port
   });
+
+  app.log.info(
+    {
+      runtimeModules: runtimeModuleCatalog
+    },
+    "Backend runtime modules loaded"
+  );
 }
 
 void main();

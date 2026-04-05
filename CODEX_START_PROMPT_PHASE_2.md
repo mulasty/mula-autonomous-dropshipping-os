@@ -233,7 +233,7 @@ This block is complete only if:
 ## Scope guard
 Do not yet implement:
 - real supplier adapters
-n- live BaseLinker integration
+- live BaseLinker integration
 - actual OpenAI runtime integration
 - full n8n workflow exports
 - operator UI
