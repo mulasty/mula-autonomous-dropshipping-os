@@ -68,7 +68,7 @@ Build a safe, scalable, Codex-friendly commerce system that can:
 
 ## Current repo mode  
 - this workspace is documentation-first, with canonical docs still at repo root  
-- implementation assets now begin under `db/` and `automation/`  
+- implementation assets now begin under `db/`, `automation/`, and `app/backend/`  
 - REPOSITORY_BLUEPRINT.md describes both the current hybrid state and the fuller target layout  
 - until the repo is intentionally migrated, keep new canonical documentation files at repo root
 

@@ -4,7 +4,7 @@
 Define how the repository is organized today, which files are canonical during the current documentation phase, and how the repo should evolve later without confusing contributors or Codex sessions.
 
 ## Current repository mode  
-The repository currently operates as a documentation-first workspace with initial implementation directories. Canonical documents still live at repo root, while execution assets are now starting under `db/` and `automation/`.
+The repository currently operates as a documentation-first workspace with initial implementation directories. Canonical documents still live at repo root, while execution assets are now starting under `db/`, `automation/`, and `app/backend/`.
 
 ## Current source-of-truth files  
 ### Orientation and governance  
@@ -39,7 +39,8 @@ The repository currently operates as a documentation-first workspace with initia
 - db/schema/  
 - db/views/  
 - db/seeds/  
-- automation/contracts/
+- automation/contracts/  
+- app/backend/
 
 ## Working rules during the current phase  
 - add new canonical documentation files at repo root unless the task explicitly performs the full docs migration  
@@ -126,7 +127,7 @@ These are planned artifacts, not missing mandatory files for the current flat ph
 ## Codex working contract  
 - do not assume planned files already exist  
 - use the current flat files first when gathering context  
-- if a planned implementation file belongs to `db/`, `automation/`, or another runtime folder, place it there now  
+- if a planned implementation file belongs to `db/`, `automation/`, `app/backend/`, or another runtime folder, place it there now  
 - if a planned documentation file is created before migration, place it at repo root unless the task also performs the folder split  
 - log repo-level structural changes in PROJECT_CHANGELOG.md
 

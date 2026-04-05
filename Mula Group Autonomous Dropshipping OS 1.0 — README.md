@@ -86,7 +86,7 @@ This project aims to create a production-oriented sales system that can reduce m
 - AI_AGENT_PROMPT_LIBRARY.md
 
 ## Current repo shape  
-- the repository is currently documentation-first at repo root with initial implementation directories under `db/` and `automation/`  
+- the repository is currently documentation-first at repo root with implementation directories under `db/`, `automation/`, and `app/backend/`  
 - the planned foldered layout is described in REPOSITORY_BLUEPRINT.md  
 - repo-level structural changes should be logged in PROJECT_CHANGELOG.md
 

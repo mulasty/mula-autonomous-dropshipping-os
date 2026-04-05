@@ -17,3 +17,6 @@ Record repository-level changes that affect navigation, canonical structure, or 
 - added `.editorconfig` and this changelog to make future edits more consistent
 - added initial `db/schema`, `db/views`, `db/seeds`, and `automation/contracts` structure as the first implementation assets  
 - established the first PostgreSQL migration set for the canonical data model and seeded minimum operational policy defaults
+- added `app/backend` as a thin TypeScript and Fastify service over repository metadata and PostgreSQL tables
+- introduced health, metadata, and read-only data routes with safe `503` behavior when `DATABASE_URL` is missing
+- synchronized backend registry definitions with SQL enum/status constraints and added normalized status-filter handling
