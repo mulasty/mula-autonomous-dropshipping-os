@@ -1,0 +1,330 @@
+﻿# Mula Group Autonomous Dropshipping OS 1.0 — COMPENDIUM
+
+
+Status: ACTIVE
+Owner: Mula Group
+Project mode: living knowledge base + implementation control center
+Primary goal: build a modular autonomous dropshipping system operated by agent workflows with human control over exceptions.
+
+
+---
+
+
+## 1. Project vision
+
+
+Mula Group Autonomous Dropshipping OS 1.0 is a production-oriented commerce operating system for automated online sales in a dropshipping model. The system is designed to import supplier data, normalize products, evaluate listing viability, generate listing content, publish offers, synchronize price and stock, route orders, support customers, and report exceptions.
+
+
+The project is intentionally structured as a Codex-friendly repository with explicit architecture, modules, prompts, policies, logs, and implementation phases.
+
+
+---
+
+
+## 2. Core assumptions
+
+
+1. BaseLinker is the operational commerce hub.
+2. n8n is the workflow orchestration layer.
+3. Supabase/Postgres is the source-of-truth data layer.
+4. AI is the decision-support and generation layer, not the source of truth.
+5. Every risky action must have rules, logs, and an escalation path.
+6. Version 1.0 focuses on one supplier and one primary sales channel.
+
+
+---
+
+
+## 3. Strategic objective
+
+
+Build an autonomous but controlled dropshipping system capable of handling 70–90% of repetitive operational work while escalating uncertain, legal, financial, or reputational exceptions to a human operator.
+
+
+---
+
+
+## 4. System layers
+
+
+### 4.1 Data Intake Layer
+- supplier feeds
+- XML / CSV / API / email / FTP
+- marketplace data
+- logistics events
+- customer messages
+
+
+### 4.2 Normalization Layer
+- field mapping
+- attribute cleanup
+- SKU / EAN standardization
+- category normalization
+- image validation
+- data quality scoring
+
+
+### 4.3 Business Rules Layer
+- minimum margin rules
+- allowed categories
+- shipping time thresholds
+- supplier trust scoring
+- listing eligibility rules
+- escalation triggers
+
+
+### 4.4 AI Agent Layer
+- Product Selection Agent
+- Listing Agent
+- Categorization Agent
+- Customer Support Agent
+- Analytics Agent
+
+
+### 4.5 Workflow Layer
+- import workflow
+- qualification workflow
+- listing generation workflow
+- publication workflow
+- sync workflow
+- order routing workflow
+- support workflow
+- daily reporting workflow
+
+
+### 4.6 Control Tower Layer
+- exception queue
+- dashboard
+- alerts
+- audit logs
+- operator review panel
+
+
+---
+
+
+## 5. Operational modules
+
+
+### Module A — Supplier Intake
+Purpose: ingest supplier data into the system.
+
+
+### Module B — Product Intelligence
+Purpose: score product quality, margin, risk, and listing eligibility.
+
+
+### Module C — Listing Factory
+Purpose: generate titles, descriptions, attributes, SEO, and channel-ready payloads.
+
+
+### Module D — Sync Engine
+Purpose: keep prices and stock aligned with supplier changes and guardrails.
+
+
+### Module E — Order Router
+Purpose: validate and forward orders to supplier systems.
+
+
+### Module F — Customer Support AI
+Purpose: automate low-risk customer conversations and escalate sensitive cases.
+
+
+### Module G — Control Tower
+Purpose: central oversight, exceptions, KPIs, and implementation governance.
+
+
+---
+
+
+## 6. Canonical stack
+
+
+- BaseLinker
+- n8n
+- Supabase / PostgreSQL
+- OpenAI
+- Google Sheets
+- Telegram
+- Gmail / business email
+
+
+Optional later:
+- Airtable
+- Metabase / Looker Studio
+- OCR / document parsers
+- Redis / queueing layer
+
+
+---
+
+
+## 7. Primary KPIs
+
+
+- products imported
+- products approved for listing
+- products published
+- average gross margin
+- average net margin
+- order pass-through success rate
+- out-of-stock incidents
+- pricing exceptions
+- support automation rate
+- escalation rate
+- supplier error rate
+
+
+---
+
+
+## 8. Required governance rules
+
+
+- no automated publication below minimum margin
+- no automated publication for banned categories
+- no automated response for complex complaints
+- no silent price changes above defined threshold
+- every AI action logged with timestamp and context
+- every failed workflow added to exception queue
+
+
+---
+
+
+## 9. Repository map source
+
+
+The repository structure for this project lives in the companion file:
+`Mula Group Autonomous Dropshipping OS 1.0 — REPOSITORY_BLUEPRINT.md`
+
+
+This file should remain the implementation source of truth for folders, documents, prompts, architecture specs, and delivery order.
+
+
+---
+
+
+## 10. Living documentation protocol
+
+
+Every future session should update this compendium with:
+- newly confirmed business rules
+- supplier assumptions
+- mapping decisions
+- architecture changes
+- prompt changes
+- implementation progress
+- risks and open questions
+- validated workflows
+- rejected ideas and why
+
+
+Recommended update format:
+- Date
+- What changed
+- Why it changed
+- Impacted module
+- Required follow-up
+
+
+---
+
+
+## 11. Open decisions backlog
+
+
+1. Which supplier will be used for phase 1?
+2. Which first channel is primary: Allegro or own store?
+3. What minimum margin rule will govern publication?
+4. What categories are allowed in v1?
+5. What categories are banned in v1?
+6. What messages can AI answer automatically?
+7. What events trigger operator escalation?
+
+
+---
+
+
+## 12. Implementation phases
+
+
+### Phase 0 — Strategy and policies
+Define constraints, channels, categories, margins, supplier assumptions.
+
+
+### Phase 1 — Data intake
+Build supplier feed intake and normalized product layer.
+
+
+### Phase 2 — Rules engine
+Build pricing, eligibility, and exception rules.
+
+
+### Phase 3 — Product intelligence
+Add AI scoring and selection.
+
+
+### Phase 4 — Listing factory
+Generate listing assets and channel payloads.
+
+
+### Phase 5 — Publication and sync
+Publish listings and keep stock/pricing safe.
+
+
+### Phase 6 — Order automation
+Route orders and track operational events.
+
+
+### Phase 7 — Customer support automation
+Automate low-risk customer service.
+
+
+### Phase 8 — Control tower
+Add dashboards, alerts, review queues, and reporting.
+
+
+---
+
+
+## 13. Working principle with Codex
+
+
+Codex should always operate against explicit files, module contracts, and repository docs. New implementation tasks should be derived from the blueprint, not improvised ad hoc.
+
+
+Each coding cycle should reference:
+- architecture file
+- target module spec
+- policy file
+- prompt file if AI behavior is involved
+- acceptance checklist
+
+
+---
+
+
+## 14. Next recommended artifacts
+
+
+1. START_HERE.md
+2. SYSTEM_OVERVIEW.md
+3. IMPLEMENTATION_PHASES.md
+4. REPOSITORY_BLUEPRINT.md
+5. PRODUCT_RULES_ENGINE.md
+6. LISTING_FACTORY_SPEC.md
+7. ORDER_AUTOMATION_SPEC.md
+8. CUSTOMER_SUPPORT_POLICY.md
+9. AI_AGENT_PROMPT_LIBRARY.md
+10. CONTROL_TOWER_DASHBOARD.md
+
+
+---
+
+
+## 15. Notes
+
+
+This document is the master compendium. It should grow continuously and remain descriptive, strategic, and operational. File-level technical detail belongs in dedicated blueprint and module documents.

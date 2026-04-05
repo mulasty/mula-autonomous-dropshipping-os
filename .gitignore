@@ -1,0 +1,19 @@
+# OS
+Thumbs.db
+.DS_Store
+
+# Editors
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
