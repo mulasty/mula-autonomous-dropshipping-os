@@ -1,0 +1,55 @@
+{
+  "contract_name": "supplier_intake_contract",
+  "version": "v1",
+  "description": "Canonical contract for supplier feed intake and raw import persistence.",
+  "trigger": {
+    "supported_modes": ["schedule", "manual"],
+    "source_types": ["xml_feed", "csv_download", "rest_api", "ftp_sftp", "email_attachment"]
+  },
+  "input": {
+    "supplier": {
+      "supplier_id": "uuid",
+      "supplier_name": "string",
+      "integration_type": "string",
+      "source_endpoint": "string"
+    },
+    "request_context": {
+      "source_reference": "string",
+      "triggered_by": "system|operator",
+      "requested_at": "timestamp"
+    }
+  },
+  "output": {
+    "supplier_import": {
+      "import_id": "uuid",
+      "supplier_id": "uuid",
+      "import_status": "started|fetched|parsed|completed|failed|partial",
+      "records_received": "integer",
+      "records_valid": "integer",
+      "records_invalid": "integer"
+    },
+    "products_raw": {
+      "raw_product_id": "uuid",
+      "supplier_id": "uuid",
+      "import_id": "uuid",
+      "source_product_reference": "string",
+      "raw_payload_json": "jsonb",
+      "payload_hash": "string"
+    },
+    "events": [
+      "supplier_import_started",
+      "supplier_payload_fetched",
+      "supplier_payload_parsed",
+      "raw_product_saved",
+      "supplier_import_completed"
+    ]
+  },
+  "idempotency": {
+    "keys": ["supplier_id", "source_reference", "payload_hash"],
+    "rule": "Do not create duplicate raw product rows for the same payload hash inside the same import."
+  },
+  "failure_behavior": {
+    "create_exception_on": ["fetch_failure", "schema_failure", "repeated_partial_import"],
+    "exception_category_examples": ["import_failure", "schema_failure", "supplier_feed_unavailable"]
+  }
+}

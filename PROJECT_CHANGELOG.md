@@ -15,3 +15,5 @@ Record repository-level changes that affect navigation, canonical structure, or 
 - aligned canonical statuses and flows across architecture, data model, event flow, listing, order, and workflow specs  
 - rewrote `REPOSITORY_BLUEPRINT.md` to describe the real current flat repo and the future migration path separately  
 - added `.editorconfig` and this changelog to make future edits more consistent
+- added initial `db/schema`, `db/views`, `db/seeds`, and `automation/contracts` structure as the first implementation assets  
+- established the first PostgreSQL migration set for the canonical data model and seeded minimum operational policy defaults

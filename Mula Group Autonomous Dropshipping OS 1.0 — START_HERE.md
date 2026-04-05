@@ -67,9 +67,10 @@ Build a safe, scalable, Codex-friendly commerce system that can:
 - ORDER_AUTOMATION_SPEC.md
 
 ## Current repo mode  
-- this workspace currently operates as a flat documentation pack at repo root  
-- REPOSITORY_BLUEPRINT.md describes the future foldered structure, not a finished current layout  
-- until the repo is intentionally migrated, keep new documentation files at repo root
+- this workspace is documentation-first, with canonical docs still at repo root  
+- implementation assets now begin under `db/` and `automation/`  
+- REPOSITORY_BLUEPRINT.md describes both the current hybrid state and the fuller target layout  
+- until the repo is intentionally migrated, keep new canonical documentation files at repo root
 
 ## Target folder logic after migration  
 - `/docs` = knowledge and technical specs  

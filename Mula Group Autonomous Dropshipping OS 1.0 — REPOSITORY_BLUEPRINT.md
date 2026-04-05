@@ -4,7 +4,7 @@
 Define how the repository is organized today, which files are canonical during the current documentation phase, and how the repo should evolve later without confusing contributors or Codex sessions.
 
 ## Current repository mode  
-The repository currently operates as a flat documentation workspace. During this phase, the canonical files live at repo root and should stay there unless a task explicitly includes a repo migration.
+The repository currently operates as a documentation-first workspace with initial implementation directories. Canonical documents still live at repo root, while execution assets are now starting under `db/` and `automation/`.
 
 ## Current source-of-truth files  
 ### Orientation and governance  
@@ -35,8 +35,15 @@ The repository currently operates as a flat documentation workspace. During this
 - CODEX_START_PROMPT_PHASE_1.md  
 - CODEX_TASK_PACK.md
 
-## Working rules during the flat phase  
-- add new documentation files at repo root unless the task explicitly introduces the foldered layout  
+### Implemented structure already present  
+- db/schema/  
+- db/views/  
+- db/seeds/  
+- automation/contracts/
+
+## Working rules during the current phase  
+- add new canonical documentation files at repo root unless the task explicitly performs the full docs migration  
+- add database and workflow implementation assets under their actual runtime folders  
 - do not rename or move canonical docs casually  
 - keep filenames stable so cross-references and IDE tabs do not drift  
 - treat the files listed above as the current navigation layer for work
@@ -52,7 +59,7 @@ The repository currently operates as a flat documentation workspace. During this
 8. target module spec for the current task
 
 ## Planned target structure later  
-This is the intended next-stage layout after the flat documentation phase stabilizes.
+This is the intended next-stage layout after the current hybrid phase stabilizes.
 
 ```text
 repo/
@@ -73,7 +80,7 @@ repo/
 ```
 
 ## Migration triggers  
-Move from the flat layout to the foldered layout only when all of the following are true:
+Move from the current hybrid layout to the fuller foldered layout only when all of the following are true:
 - the core documentation set stops changing rapidly  
 - first implementation assets need cleaner separation  
 - cross-file references can be updated in one pass  
@@ -119,7 +126,8 @@ These are planned artifacts, not missing mandatory files for the current flat ph
 ## Codex working contract  
 - do not assume planned files already exist  
 - use the current flat files first when gathering context  
-- if a planned file is created before migration, place it at repo root unless the task also performs the folder split  
+- if a planned implementation file belongs to `db/`, `automation/`, or another runtime folder, place it there now  
+- if a planned documentation file is created before migration, place it at repo root unless the task also performs the folder split  
 - log repo-level structural changes in PROJECT_CHANGELOG.md
 
 ## Acceptance criteria  

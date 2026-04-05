@@ -1,0 +1,58 @@
+{
+  "contract_name": "rules_evaluation_contract",
+  "version": "v1",
+  "description": "Canonical contract for deterministic product qualification after normalization.",
+  "trigger": {
+    "supported_modes": ["event_driven", "manual_recheck"],
+    "event": "normalized_product_created_or_updated"
+  },
+  "input": {
+    "normalized_product": {
+      "product_id": "uuid",
+      "internal_sku": "string",
+      "supplier_sku": "string",
+      "category_normalized": "string",
+      "cost_net": "numeric",
+      "cost_gross": "numeric",
+      "shipping_time_days": "integer",
+      "stock_quantity": "integer",
+      "data_quality_score": "numeric"
+    },
+    "supplier_context": {
+      "supplier_id": "uuid",
+      "trust_score": "numeric",
+      "stock_accuracy_score": "numeric",
+      "cancellation_rate": "numeric"
+    },
+    "policy_context": {
+      "policy_version": "string",
+      "rules_version": "string"
+    }
+  },
+  "output": {
+    "product_rule_decision": {
+      "decision_id": "uuid",
+      "product_id": "uuid",
+      "decision_status": "approved|rejected|review_required|improve_required|blocked",
+      "reason_codes_json": "jsonb",
+      "projected_net_margin": "numeric",
+      "projected_gross_margin": "numeric",
+      "risk_flags_json": "jsonb",
+      "recommended_next_step": "string"
+    },
+    "events": [
+      "product_ready_for_rules",
+      "rules_evaluation_started",
+      "product_rule_decision_created"
+    ]
+  },
+  "routing_rules": {
+    "allowed_to_continue": ["approved", "improve_required"],
+    "must_stop": ["rejected", "blocked"],
+    "must_review": ["review_required"]
+  },
+  "failure_behavior": {
+    "create_exception_on": ["policy_unavailable", "margin_calculation_failure", "invalid_required_fields"],
+    "exception_category_examples": ["rule_conflict", "policy_resolution_failure", "margin_guardrail_breach"]
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "contract_name": "order_submission_contract",
+  "version": "v1",
+  "description": "Canonical contract for validated order routing to the supplier endpoint.",
+  "trigger": {
+    "supported_modes": ["event_driven", "manual_retry"],
+    "event": "order_status_validated_or_queued_for_supplier"
+  },
+  "input": {
+    "order": {
+      "order_id": "uuid",
+      "channel": "string",
+      "channel_order_id": "string",
+      "order_status": "validated|queued_for_supplier",
+      "payment_status": "authorized|paid",
+      "order_total_gross": "numeric",
+      "currency": "string"
+    },
+    "items": [
+      {
+        "order_item_id": "uuid",
+        "product_id": "uuid",
+        "listing_id": "uuid",
+        "supplier_sku": "string",
+        "quantity": "integer",
+        "unit_price": "numeric"
+      }
+    ],
+    "shipping_address": {
+      "name": "string",
+      "line1": "string",
+      "postal_code": "string",
+      "city": "string",
+      "country": "string",
+      "phone": "string"
+    }
+  },
+  "output": {
+    "order_update": {
+      "order_id": "uuid",
+      "supplier_submission_status": "submitted|acknowledged|failed",
+      "tracking_status": "pending|received",
+      "order_status": "submitted_to_supplier|supplier_acknowledged|awaiting_tracking|exception"
+    },
+    "order_event": {
+      "event_type": "supplier_submission_started|supplier_submission_succeeded|supplier_submission_failed",
+      "event_source": "n8n_workflow|operator",
+      "event_payload_json": "jsonb"
+    }
+  },
+  "idempotency": {
+    "keys": ["order_id", "supplier_sku", "manual_retry_token"],
+    "rule": "Never submit the same logical supplier order twice without an explicit retry context."
+  },
+  "failure_behavior": {
+    "create_exception_on": ["missing_supplier_sku", "blocked_product", "supplier_timeout", "ambiguous_supplier_response"],
+    "exception_category_examples": ["mapping_issue", "supplier_rejection", "tracking_missing", "stock_conflict"]
+  }
+}
