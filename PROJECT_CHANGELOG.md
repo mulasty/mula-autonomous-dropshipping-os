@@ -23,3 +23,8 @@ Record repository-level changes that affect navigation, canonical structure, or 
 - started Phase 2 runtime implementation with a deterministic rules-engine module and evaluation endpoint
 - added Phase 3 runtime scaffolding with shared primitives plus supplier intake, qualification, and order-routing modules
 - added a deterministic listing preview runtime with prompt assets, channel constraints, validation, and `POST /v1/listings/preview`
+- added Phase 7 runtime foundations for sync safety evaluation, policy-bound support classification/response, and control-tower operational visibility
+- added Phase 4 persistence foundations with shared DB abstractions, policy loader wiring, durable exception repository path, rule-decision persistence, and initial repository contracts for intake/order routing
+- added Phase 5 runtime foundations with deterministic normalization, `products_normalized` persistence, and a stage-aware `POST /v1/pipeline/qualify` orchestration path from raw input to qualification
+- repaired Phase 6 boundaries by separating listing preview, draft persistence, and publication preparation, while aligning listing runtime output naming with prompt/schema conventions
+- repaired Phase 7 safety paths by making support responses load stored classifications by `messageId`, refusing automated order/shipping answers without verified context, surfacing non-DB exceptions through a shared in-memory queue, and keeping sync stock/price actions explicit in one result

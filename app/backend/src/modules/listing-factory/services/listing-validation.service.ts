@@ -1,6 +1,6 @@
 import { ChannelConstraints } from "../contracts/channel-constraints.contract";
 import {
-  ListingContentPackage,
+  ListingGeneratedPayload,
   ListingValidationResult
 } from "../contracts/listing-generation-output.contract";
 import { ListingProductInput } from "../contracts/listing-generation-input.contract";
@@ -15,30 +15,61 @@ function hasDuplicateStrings(values: string[]): boolean {
   return new Set(normalized).size !== normalized.length;
 }
 
+const placeholderPatterns = ["{{", "}}", "tbd", "n/a", "[placeholder]"];
+
+function resolveRequiredValue(
+  product: ListingProductInput,
+  payload: ListingGeneratedPayload,
+  key: string
+): string | number | boolean | null | undefined {
+  const attributeValue = payload.attributes[key];
+  if (attributeValue !== undefined) {
+    return attributeValue;
+  }
+
+  switch (key) {
+    case "brand":
+      return product.brand;
+    case "model":
+      return product.model;
+    default:
+      return undefined;
+  }
+}
+
 export class ListingValidationService {
   validate(
     product: ListingProductInput,
-    content: ListingContentPackage,
+    generatedPayload: Omit<ListingGeneratedPayload, "validation_status">,
     constraints: ChannelConstraints
   ): ListingValidationResult {
     const errorCodes: string[] = [];
     const warningCodes: string[] = [];
-    const combinedText = [content.title, ...content.bullets, content.description].join(" ");
+    const combinedText = [
+      generatedPayload.title,
+      ...generatedPayload.bullets,
+      generatedPayload.description,
+      generatedPayload.seo.meta_title,
+      generatedPayload.seo.meta_description
+    ].join(" ");
 
-    if (content.title.trim().length === 0) {
+    if (generatedPayload.title.trim().length === 0) {
       errorCodes.push("EMPTY_TITLE");
     }
 
-    if (constraints.titleMaxLength && content.title.length > constraints.titleMaxLength) {
+    if (constraints.titleMaxLength && generatedPayload.title.length > constraints.titleMaxLength) {
       errorCodes.push("TITLE_TOO_LONG");
     }
 
-    if (constraints.descriptionRequired && content.description.trim().length === 0) {
+    if (constraints.descriptionRequired && generatedPayload.description.trim().length === 0) {
       errorCodes.push("MISSING_DESCRIPTION");
     }
 
     for (const attributeKey of constraints.requiredAttributeGroups) {
-      const value = content.attributes[attributeKey];
+      const value = resolveRequiredValue(product, {
+        ...generatedPayload,
+        validation_status: "failed"
+      }, attributeKey);
       if (value === undefined || value === null || `${value}`.trim().length === 0) {
         errorCodes.push("MISSING_REQUIRED_ATTRIBUTE");
         break;
@@ -53,20 +84,36 @@ export class ListingValidationService {
       errorCodes.push("CHANNEL_FORMAT_VIOLATION");
     }
 
-    if (hasDuplicateStrings(content.bullets)) {
+    if (hasDuplicateStrings(generatedPayload.bullets)) {
       warningCodes.push("DUPLICATED_SPAMMY_TEXT");
     }
 
-    if (!constraints.bulletsSupported && content.bullets.length > 0) {
+    if (!constraints.bulletsSupported && generatedPayload.bullets.length > 0) {
       warningCodes.push("CHANNEL_FORMAT_VIOLATION");
+    }
+
+    if (includesPattern(combinedText, placeholderPatterns)) {
+      errorCodes.push("UNSUPPORTED_PLACEHOLDER");
     }
 
     if (
       product.brand &&
-      content.title.trim().length > 0 &&
-      !content.title.toLowerCase().includes(product.brand.toLowerCase())
+      generatedPayload.title.trim().length > 0 &&
+      !generatedPayload.title.toLowerCase().includes(product.brand.toLowerCase())
     ) {
       warningCodes.push("FACT_CONFLICT");
+    }
+
+    if (
+      product.brand &&
+      generatedPayload.seo.meta_title.trim().length > 0 &&
+      !generatedPayload.seo.meta_title.toLowerCase().includes(product.brand.toLowerCase())
+    ) {
+      warningCodes.push("FACT_CONFLICT");
+    }
+
+    if (constraints.policyMode === "fallback_conservative" && errorCodes.length === 0) {
+      warningCodes.push("UNKNOWN_CHANNEL_CONSTRAINTS");
     }
 
     const validationStatus =

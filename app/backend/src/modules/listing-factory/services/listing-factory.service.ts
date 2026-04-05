@@ -19,7 +19,7 @@ import { ListingValidationService } from "./listing-validation.service";
 
 function resolveRecommendedNextStep(output: ListingGenerationOutput): string {
   if (output.validation.validationStatus === "passed") {
-    return "mark_ready_for_publication";
+    return "persist_listing_and_prepare_publication";
   }
 
   if (output.validation.validationStatus === "review_required") {
@@ -54,11 +54,9 @@ export class ListingFactoryService {
 
     const constraints = resolveChannelConstraints(input.channel, input.channelConstraints);
     const generation = this.generator.generate(input.normalizedProduct, constraints);
-    const validation = this.validator.validate(input.normalizedProduct, generation.content, constraints);
+    const validation = this.validator.validate(input.normalizedProduct, generation.generatedPayload, constraints);
     const listingStatus =
-      validation.validationStatus === "passed"
-        ? "ready_for_publication"
-        : validation.validationStatus === "failed"
+      validation.validationStatus === "failed"
           ? "validation_failed"
           : "generated";
 
@@ -101,7 +99,10 @@ export class ListingFactoryService {
       channel: input.channel,
       promptVersion: input.promptVersion ?? "listing-system-prompt-v1",
       listingStatus,
-      content: generation.content,
+      generatedPayload: {
+        ...generation.generatedPayload,
+        validation_status: validation.validationStatus
+      },
       validation,
       qualitySignals: generation.qualitySignals,
       recommendedNextStep: "",

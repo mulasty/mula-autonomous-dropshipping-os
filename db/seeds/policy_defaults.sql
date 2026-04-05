@@ -8,6 +8,31 @@ insert into policies (
 )
 values
   (
+    'rules_engine_policy',
+    'starter-policy-v1',
+    'rules_engine',
+    jsonb_build_object(
+      'policy_version', 'starter-policy-v1',
+      'rules_version', 'rules-engine-v1',
+      'minimum_net_margin', 0.18,
+      'review_warning_band_upper', 0.24,
+      'minimum_absolute_profit_amount', 20.00,
+      'minimum_supplier_trust_score', 60.00,
+      'supplier_trust_review_threshold', 75.00,
+      'maximum_shipping_time_days', 5,
+      'minimum_data_quality_score', 60.00,
+      'minimum_image_count', 3,
+      'minimum_stock_quantity', 1,
+      'minimum_category_mapping_confidence', 0.80,
+      'allowed_categories', jsonb_build_array(),
+      'banned_categories', jsonb_build_array(),
+      'allow_missing_fee_model_review', false,
+      'allow_missing_shipping_estimate_review', false
+    ),
+    now(),
+    true
+  ),
+  (
     'pricing_guardrails',
     'v1',
     'pricing',

@@ -1,16 +1,44 @@
 import { FastifyInstance } from "fastify";
+import { DatabaseUnavailableError, PostgresDatabase } from "../db/postgres";
+import { PolicyLoaderService, PostgresPolicyRepository } from "../modules/policy-loader";
 import {
+  PostgresProductRuleDecisionRepository,
   ProductRulesEngineService,
   RuleEvaluationInput,
+  RuleEvaluationRuntimeService,
   RulesPolicyContext
 } from "../modules/rules-engine";
+import { PostgresDatabaseClient } from "../shared";
+
+interface RulesRouteOptions {
+  db: PostgresDatabase;
+}
+
+interface ValidationIssue {
+  path: string;
+  message: string;
+}
+
+interface ParsedRuleEvaluationRequest {
+  evaluationInput: RuleEvaluationInput;
+  persistDecision: boolean;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function parseOptionalNumber(value: unknown): number | null | undefined {
+function readOptionalString(
+  value: unknown,
+  path: string,
+  issues: ValidationIssue[],
+  options?: { required?: boolean }
+): string | null | undefined {
   if (value === undefined) {
+    if (options?.required) {
+      issues.push({ path, message: "Expected non-empty string." });
+    }
+
     return undefined;
   }
 
@@ -18,11 +46,25 @@ function parseOptionalNumber(value: unknown): number | null | undefined {
     return null;
   }
 
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+  if (typeof value !== "string" || value.trim().length === 0) {
+    issues.push({ path, message: "Expected non-empty string." });
+    return undefined;
+  }
+
+  return value;
 }
 
-function parseOptionalBoolean(value: unknown): boolean | null | undefined {
+function readOptionalNumber(
+  value: unknown,
+  path: string,
+  issues: ValidationIssue[],
+  options?: { required?: boolean }
+): number | null | undefined {
   if (value === undefined) {
+    if (options?.required) {
+      issues.push({ path, message: "Expected finite number." });
+    }
+
     return undefined;
   }
 
@@ -30,11 +72,25 @@ function parseOptionalBoolean(value: unknown): boolean | null | undefined {
     return null;
   }
 
-  return typeof value === "boolean" ? value : undefined;
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    issues.push({ path, message: "Expected finite number." });
+    return undefined;
+  }
+
+  return value;
 }
 
-function parseOptionalString(value: unknown): string | null | undefined {
+function readOptionalBoolean(
+  value: unknown,
+  path: string,
+  issues: ValidationIssue[],
+  options?: { required?: boolean }
+): boolean | null | undefined {
   if (value === undefined) {
+    if (options?.required) {
+      issues.push({ path, message: "Expected boolean." });
+    }
+
     return undefined;
   }
 
@@ -42,120 +98,352 @@ function parseOptionalString(value: unknown): string | null | undefined {
     return null;
   }
 
-  return typeof value === "string" ? value : undefined;
+  if (typeof value !== "boolean") {
+    issues.push({ path, message: "Expected boolean." });
+    return undefined;
+  }
+
+  return value;
 }
 
-function parseOptionalStringArray(value: unknown): string[] | undefined {
+function readOptionalStringArray(
+  value: unknown,
+  path: string,
+  issues: ValidationIssue[]
+): string[] | undefined {
   if (value === undefined) {
     return undefined;
   }
 
-  if (!Array.isArray(value)) {
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
+    issues.push({ path, message: "Expected array of strings." });
     return undefined;
   }
 
-  return value.filter((item): item is string => typeof item === "string");
+  return value;
 }
 
-function parseConfigNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
+function readOptionalObject(
+  value: unknown,
+  path: string,
+  issues: ValidationIssue[],
+  options?: { required?: boolean }
+): Record<string, unknown> | undefined {
+  if (value === undefined) {
+    if (options?.required) {
+      issues.push({ path, message: "Expected object." });
+    }
 
-function parseConfigBoolean(value: unknown): boolean | undefined {
-  return typeof value === "boolean" ? value : undefined;
-}
-
-function parseConfigString(value: unknown): string | undefined {
-  return typeof value === "string" ? value : undefined;
-}
-
-function parseRuleEvaluationInput(body: unknown): RuleEvaluationInput | null {
-  if (!isRecord(body) || !isRecord(body.normalizedProduct)) {
-    return null;
+    return undefined;
   }
 
-  const normalizedProduct = body.normalizedProduct;
-  const productId = parseOptionalString(normalizedProduct.productId);
-  const projectedSalePrice = parseOptionalNumber(normalizedProduct.projectedSalePrice);
-  const targetChannel = parseOptionalString(normalizedProduct.targetChannel);
-
-  if (!productId || typeof projectedSalePrice !== "number" || !targetChannel) {
-    return null;
+  if (!isRecord(value)) {
+    issues.push({ path, message: "Expected object." });
+    return undefined;
   }
 
-  const supplierContext = isRecord(body.supplierContext) ? body.supplierContext : {};
-  const policyContext = isRecord(body.policyContext) ? body.policyContext : {};
+  return value;
+}
 
-  return {
+function parseRuleEvaluationRequest(
+  body: unknown
+): { value?: ParsedRuleEvaluationRequest; issues: ValidationIssue[] } {
+  const issues: ValidationIssue[] = [];
+  const payload = readOptionalObject(body, "body", issues, { required: true });
+  if (!payload) {
+    return { issues };
+  }
+
+  const normalizedProduct = readOptionalObject(
+    payload.normalizedProduct,
+    "normalizedProduct",
+    issues,
+    { required: true }
+  );
+  if (!normalizedProduct) {
+    return { issues };
+  }
+
+  const supplierContext =
+    payload.supplierContext === undefined
+      ? {}
+      : readOptionalObject(payload.supplierContext, "supplierContext", issues) ?? {};
+  const policyContext =
+    payload.policyContext === undefined
+      ? {}
+      : readOptionalObject(payload.policyContext, "policyContext", issues) ?? {};
+  const persistDecision =
+    readOptionalBoolean(payload.persistDecision, "persistDecision", issues) ?? false;
+
+  const evaluationInput: RuleEvaluationInput = {
     normalizedProduct: {
-      productId,
-      projectedSalePrice,
-      targetChannel,
-      internalSku: parseOptionalString(normalizedProduct.internalSku),
-      supplierSku: parseOptionalString(normalizedProduct.supplierSku),
-      categoryNormalized: parseOptionalString(normalizedProduct.categoryNormalized),
-      costNet: parseOptionalNumber(normalizedProduct.costNet),
-      costGross: parseOptionalNumber(normalizedProduct.costGross),
-      projectedSalePriceGross: parseOptionalNumber(normalizedProduct.projectedSalePriceGross),
-      shippingTimeDays: parseOptionalNumber(normalizedProduct.shippingTimeDays),
-      shippingCostEstimate: parseOptionalNumber(normalizedProduct.shippingCostEstimate),
-      shippingMethodDefined: parseOptionalBoolean(normalizedProduct.shippingMethodDefined),
-      stockQuantity: parseOptionalNumber(normalizedProduct.stockQuantity),
-      dataQualityScore: parseOptionalNumber(normalizedProduct.dataQualityScore),
-      imageCount: parseOptionalNumber(normalizedProduct.imageCount),
-      titleNormalized: parseOptionalString(normalizedProduct.titleNormalized),
-      hasRequiredAttributes: parseOptionalBoolean(normalizedProduct.hasRequiredAttributes),
-      categoryMappingConfidence: parseOptionalNumber(normalizedProduct.categoryMappingConfidence),
-      channelFeeRate: parseOptionalNumber(normalizedProduct.channelFeeRate),
-      paymentFeeRate: parseOptionalNumber(normalizedProduct.paymentFeeRate),
-      handlingBuffer: parseOptionalNumber(normalizedProduct.handlingBuffer),
-      returnRiskBuffer: parseOptionalNumber(normalizedProduct.returnRiskBuffer),
-      taxRate: parseOptionalNumber(normalizedProduct.taxRate)
+      productId:
+        readOptionalString(
+          normalizedProduct.productId,
+          "normalizedProduct.productId",
+          issues,
+          {
+            required: true
+          }
+        ) ?? "",
+      projectedSalePrice:
+        readOptionalNumber(
+          normalizedProduct.projectedSalePrice,
+          "normalizedProduct.projectedSalePrice",
+          issues,
+          { required: true }
+        ) ?? 0,
+      targetChannel:
+        readOptionalString(
+          normalizedProduct.targetChannel,
+          "normalizedProduct.targetChannel",
+          issues,
+          { required: true }
+        ) ?? "",
+      internalSku: readOptionalString(
+        normalizedProduct.internalSku,
+        "normalizedProduct.internalSku",
+        issues
+      ),
+      supplierSku: readOptionalString(
+        normalizedProduct.supplierSku,
+        "normalizedProduct.supplierSku",
+        issues
+      ),
+      categoryNormalized: readOptionalString(
+        normalizedProduct.categoryNormalized,
+        "normalizedProduct.categoryNormalized",
+        issues
+      ),
+      costNet: readOptionalNumber(normalizedProduct.costNet, "normalizedProduct.costNet", issues),
+      costGross: readOptionalNumber(
+        normalizedProduct.costGross,
+        "normalizedProduct.costGross",
+        issues
+      ),
+      projectedSalePriceGross: readOptionalNumber(
+        normalizedProduct.projectedSalePriceGross,
+        "normalizedProduct.projectedSalePriceGross",
+        issues
+      ),
+      shippingTimeDays: readOptionalNumber(
+        normalizedProduct.shippingTimeDays,
+        "normalizedProduct.shippingTimeDays",
+        issues
+      ),
+      shippingCostEstimate: readOptionalNumber(
+        normalizedProduct.shippingCostEstimate,
+        "normalizedProduct.shippingCostEstimate",
+        issues
+      ),
+      shippingMethodDefined: readOptionalBoolean(
+        normalizedProduct.shippingMethodDefined,
+        "normalizedProduct.shippingMethodDefined",
+        issues
+      ),
+      stockQuantity: readOptionalNumber(
+        normalizedProduct.stockQuantity,
+        "normalizedProduct.stockQuantity",
+        issues
+      ),
+      dataQualityScore: readOptionalNumber(
+        normalizedProduct.dataQualityScore,
+        "normalizedProduct.dataQualityScore",
+        issues
+      ),
+      imageCount: readOptionalNumber(
+        normalizedProduct.imageCount,
+        "normalizedProduct.imageCount",
+        issues
+      ),
+      titleNormalized: readOptionalString(
+        normalizedProduct.titleNormalized,
+        "normalizedProduct.titleNormalized",
+        issues
+      ),
+      hasRequiredAttributes: readOptionalBoolean(
+        normalizedProduct.hasRequiredAttributes,
+        "normalizedProduct.hasRequiredAttributes",
+        issues
+      ),
+      categoryMappingConfidence: readOptionalNumber(
+        normalizedProduct.categoryMappingConfidence,
+        "normalizedProduct.categoryMappingConfidence",
+        issues
+      ),
+      channelFeeRate: readOptionalNumber(
+        normalizedProduct.channelFeeRate,
+        "normalizedProduct.channelFeeRate",
+        issues
+      ),
+      paymentFeeRate: readOptionalNumber(
+        normalizedProduct.paymentFeeRate,
+        "normalizedProduct.paymentFeeRate",
+        issues
+      ),
+      handlingBuffer: readOptionalNumber(
+        normalizedProduct.handlingBuffer,
+        "normalizedProduct.handlingBuffer",
+        issues
+      ),
+      returnRiskBuffer: readOptionalNumber(
+        normalizedProduct.returnRiskBuffer,
+        "normalizedProduct.returnRiskBuffer",
+        issues
+      ),
+      taxRate: readOptionalNumber(normalizedProduct.taxRate, "normalizedProduct.taxRate", issues)
     },
     supplierContext: {
-      supplierId: parseOptionalString(supplierContext.supplierId),
-      trustScore: parseOptionalNumber(supplierContext.trustScore),
-      stockAccuracyScore: parseOptionalNumber(supplierContext.stockAccuracyScore),
-      cancellationRate: parseOptionalNumber(supplierContext.cancellationRate),
-      lastImportAgeHours: parseOptionalNumber(supplierContext.lastImportAgeHours)
+      supplierId: readOptionalString(supplierContext.supplierId, "supplierContext.supplierId", issues),
+      trustScore: readOptionalNumber(supplierContext.trustScore, "supplierContext.trustScore", issues),
+      stockAccuracyScore: readOptionalNumber(
+        supplierContext.stockAccuracyScore,
+        "supplierContext.stockAccuracyScore",
+        issues
+      ),
+      cancellationRate: readOptionalNumber(
+        supplierContext.cancellationRate,
+        "supplierContext.cancellationRate",
+        issues
+      ),
+      lastImportAgeHours: readOptionalNumber(
+        supplierContext.lastImportAgeHours,
+        "supplierContext.lastImportAgeHours",
+        issues
+      )
     },
     policyContext: {
-      policyVersion: parseConfigString(policyContext.policyVersion),
-      rulesVersion: parseConfigString(policyContext.rulesVersion),
-      minimumNetMargin: parseConfigNumber(policyContext.minimumNetMargin),
-      reviewWarningBandUpper: parseConfigNumber(policyContext.reviewWarningBandUpper),
-      minimumAbsoluteProfitAmount: parseConfigNumber(policyContext.minimumAbsoluteProfitAmount),
-      minimumSupplierTrustScore: parseConfigNumber(policyContext.minimumSupplierTrustScore),
-      supplierTrustReviewThreshold: parseConfigNumber(policyContext.supplierTrustReviewThreshold),
-      maximumShippingTimeDays: parseConfigNumber(policyContext.maximumShippingTimeDays),
-      minimumDataQualityScore: parseConfigNumber(policyContext.minimumDataQualityScore),
-      minimumImageCount: parseConfigNumber(policyContext.minimumImageCount),
-      minimumStockQuantity: parseConfigNumber(policyContext.minimumStockQuantity),
-      minimumCategoryMappingConfidence: parseConfigNumber(policyContext.minimumCategoryMappingConfidence),
-      allowedCategories: parseOptionalStringArray(policyContext.allowedCategories),
-      bannedCategories: parseOptionalStringArray(policyContext.bannedCategories),
-      allowMissingFeeModelReview: parseConfigBoolean(policyContext.allowMissingFeeModelReview),
-      allowMissingShippingEstimateReview: parseConfigBoolean(policyContext.allowMissingShippingEstimateReview)
+      policyVersion: readOptionalString(
+        policyContext.policyVersion,
+        "policyContext.policyVersion",
+        issues
+      ) as string | undefined,
+      rulesVersion: readOptionalString(
+        policyContext.rulesVersion,
+        "policyContext.rulesVersion",
+        issues
+      ) as string | undefined,
+      minimumNetMargin: readOptionalNumber(
+        policyContext.minimumNetMargin,
+        "policyContext.minimumNetMargin",
+        issues
+      ) as number | undefined,
+      reviewWarningBandUpper: readOptionalNumber(
+        policyContext.reviewWarningBandUpper,
+        "policyContext.reviewWarningBandUpper",
+        issues
+      ) as number | undefined,
+      minimumAbsoluteProfitAmount: readOptionalNumber(
+        policyContext.minimumAbsoluteProfitAmount,
+        "policyContext.minimumAbsoluteProfitAmount",
+        issues
+      ) as number | undefined,
+      minimumSupplierTrustScore: readOptionalNumber(
+        policyContext.minimumSupplierTrustScore,
+        "policyContext.minimumSupplierTrustScore",
+        issues
+      ) as number | undefined,
+      supplierTrustReviewThreshold: readOptionalNumber(
+        policyContext.supplierTrustReviewThreshold,
+        "policyContext.supplierTrustReviewThreshold",
+        issues
+      ) as number | undefined,
+      maximumShippingTimeDays: readOptionalNumber(
+        policyContext.maximumShippingTimeDays,
+        "policyContext.maximumShippingTimeDays",
+        issues
+      ) as number | undefined,
+      minimumDataQualityScore: readOptionalNumber(
+        policyContext.minimumDataQualityScore,
+        "policyContext.minimumDataQualityScore",
+        issues
+      ) as number | undefined,
+      minimumImageCount: readOptionalNumber(
+        policyContext.minimumImageCount,
+        "policyContext.minimumImageCount",
+        issues
+      ) as number | undefined,
+      minimumStockQuantity: readOptionalNumber(
+        policyContext.minimumStockQuantity,
+        "policyContext.minimumStockQuantity",
+        issues
+      ) as number | undefined,
+      minimumCategoryMappingConfidence: readOptionalNumber(
+        policyContext.minimumCategoryMappingConfidence,
+        "policyContext.minimumCategoryMappingConfidence",
+        issues
+      ) as number | undefined,
+      allowedCategories: readOptionalStringArray(
+        policyContext.allowedCategories,
+        "policyContext.allowedCategories",
+        issues
+      ),
+      bannedCategories: readOptionalStringArray(
+        policyContext.bannedCategories,
+        "policyContext.bannedCategories",
+        issues
+      ),
+      allowMissingFeeModelReview: readOptionalBoolean(
+        policyContext.allowMissingFeeModelReview,
+        "policyContext.allowMissingFeeModelReview",
+        issues
+      ) as boolean | undefined,
+      allowMissingShippingEstimateReview: readOptionalBoolean(
+        policyContext.allowMissingShippingEstimateReview,
+        "policyContext.allowMissingShippingEstimateReview",
+        issues
+      ) as boolean | undefined
     } satisfies Partial<RulesPolicyContext>
+  };
+
+  if (issues.length > 0) {
+    return { issues };
+  }
+
+  return {
+    value: {
+      evaluationInput,
+      persistDecision
+    },
+    issues
   };
 }
 
-export async function registerRulesRoutes(app: FastifyInstance): Promise<void> {
-  const rulesEngine = new ProductRulesEngineService();
+export async function registerRulesRoutes(
+  app: FastifyInstance,
+  options: RulesRouteOptions
+): Promise<void> {
+  const dbClient = new PostgresDatabaseClient(options.db);
+  const rulesRuntime = new RuleEvaluationRuntimeService(
+    new ProductRulesEngineService(),
+    new PolicyLoaderService(new PostgresPolicyRepository(dbClient)),
+    dbClient.isConfigured() ? new PostgresProductRuleDecisionRepository(dbClient) : undefined
+  );
 
   app.post("/v1/rules/evaluate", async (request, reply) => {
-    const parsed = parseRuleEvaluationInput(request.body);
-    if (!parsed) {
+    const parsed = parseRuleEvaluationRequest(request.body);
+    if (!parsed.value) {
       reply.code(400).send({
         error: "invalid_rule_evaluation_request",
         message:
-          "Body must include normalizedProduct.productId, normalizedProduct.projectedSalePrice, and normalizedProduct.targetChannel."
+          "Body must include a valid normalizedProduct with productId, projectedSalePrice, and targetChannel. Optional fields must match expected types.",
+        issues: parsed.issues
       });
       return;
     }
 
+    if (parsed.value.persistDecision && !dbClient.isConfigured()) {
+      throw new DatabaseUnavailableError();
+    }
+
+    const evaluation = await rulesRuntime.evaluate(parsed.value);
     return {
-      data: rulesEngine.evaluate(parsed)
+      data: evaluation.decision,
+      meta: {
+        policySource: evaluation.loadedPolicy.source,
+        policyWarnings: evaluation.loadedPolicy.warnings,
+        persistedDecisionId: evaluation.persistedDecision?.decisionId ?? null
+      }
     };
   });
 }

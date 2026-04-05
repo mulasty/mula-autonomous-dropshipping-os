@@ -3,6 +3,7 @@ import { RowPrevalidationStatus, SupplierIntakeStatus } from "../types/intake-st
 
 export interface RawImportRecord {
   rowNumber: number;
+  rawProductId?: string | null;
   sourceProductReference?: string | null;
   rawPayload: unknown;
   prevalidationStatus: RowPrevalidationStatus;

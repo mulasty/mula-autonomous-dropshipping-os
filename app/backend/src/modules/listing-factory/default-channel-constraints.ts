@@ -13,6 +13,7 @@ const sharedShippingRestrictions = ["24h delivery", "guaranteed next day", "same
 export const defaultChannelConstraints: Record<string, ChannelConstraints> = {
   allegro: {
     channel: "allegro",
+    policyMode: "channel_specific",
     titleMaxLength: 75,
     descriptionRequired: true,
     bulletsSupported: true,
@@ -23,6 +24,7 @@ export const defaultChannelConstraints: Record<string, ChannelConstraints> = {
   },
   amazon: {
     channel: "amazon",
+    policyMode: "channel_specific",
     titleMaxLength: 150,
     descriptionRequired: true,
     bulletsSupported: true,
@@ -33,6 +35,7 @@ export const defaultChannelConstraints: Record<string, ChannelConstraints> = {
   },
   ebay: {
     channel: "ebay",
+    policyMode: "channel_specific",
     titleMaxLength: 80,
     descriptionRequired: true,
     bulletsSupported: false,
@@ -43,6 +46,7 @@ export const defaultChannelConstraints: Record<string, ChannelConstraints> = {
   },
   own_store: {
     channel: "own_store",
+    policyMode: "channel_specific",
     titleMaxLength: 140,
     descriptionRequired: true,
     bulletsSupported: true,
@@ -60,13 +64,14 @@ export function resolveChannelConstraints(
   const channelKey = channel.trim().toLowerCase();
   const fallback = defaultChannelConstraints[channelKey] ?? {
     channel: channelKey,
-    titleMaxLength: 100,
+    policyMode: "fallback_conservative" as const,
+    titleMaxLength: 70,
     descriptionRequired: true,
-    bulletsSupported: true,
+    bulletsSupported: false,
     requiredAttributeGroups: ["brand"],
     bannedClaimPatterns: sharedBannedClaimPatterns,
     shippingPromiseRestrictions: sharedShippingRestrictions,
-    publicationNotes: "Generic starter constraints until channel-specific policy is available."
+    publicationNotes: "Fallback conservative constraints until channel-specific policy is available."
   };
 
   return {

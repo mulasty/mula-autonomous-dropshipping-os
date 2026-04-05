@@ -1,5 +1,5 @@
 import {
-  ListingContentPackage,
+  ListingGeneratedPayload,
   ListingContentQualitySignals
 } from "../contracts/listing-generation-output.contract";
 import { ChannelConstraints } from "../contracts/channel-constraints.contract";
@@ -118,8 +118,8 @@ function buildSeoPackage(product: ListingProductInput, title: string, bullets: s
   ]);
 
   return {
-    metaTitle: title,
-    metaDescription: truncate(
+    meta_title: title,
+    meta_description: truncate(
       normalizeWhitespace(
         product.descriptionRaw?.trim() ||
           bullets.join(" ").trim() ||
@@ -135,12 +135,12 @@ export class ListingContentGeneratorService {
   generate(
     product: ListingProductInput,
     constraints: ChannelConstraints
-  ): { content: ListingContentPackage; qualitySignals: ListingContentQualitySignals } {
+  ): { generatedPayload: Omit<ListingGeneratedPayload, "validation_status">; qualitySignals: ListingContentQualitySignals } {
     const title = buildTitle(product, constraints);
     const bullets = buildBullets(product, constraints);
     const description = buildDescription(product, bullets);
     const seo = buildSeoPackage(product, title, bullets);
-    const content: ListingContentPackage = {
+    const generatedPayload = {
       title,
       bullets,
       description,
@@ -149,7 +149,7 @@ export class ListingContentGeneratorService {
     };
 
     return {
-      content,
+      generatedPayload,
       qualitySignals: {
         titleLength: title.length,
         bulletCount: bullets.length,

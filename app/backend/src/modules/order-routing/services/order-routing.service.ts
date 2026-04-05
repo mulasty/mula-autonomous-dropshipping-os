@@ -17,6 +17,10 @@ import {
   PlaceholderSupplierSubmissionService,
   SupplierSubmissionService
 } from "./supplier-submission.service";
+import {
+  NoopOrderRoutingRepository,
+  OrderRoutingRepository
+} from "../repositories/order-routing.repository";
 
 const defaultOrderRoutingPolicy: OrderRoutingPolicyContext = {
   allowedPaymentStatuses: ["authorized", "paid"],
@@ -108,6 +112,7 @@ function validateRoutingInput(
 export class OrderRoutingService {
   constructor(
     private readonly supplierSubmissionService: SupplierSubmissionService = new PlaceholderSupplierSubmissionService(),
+    private readonly orderRoutingRepository: OrderRoutingRepository = new NoopOrderRoutingRepository(),
     private readonly logger: RuntimeLogger = new NoopLogger(),
     private readonly exceptionService: ExceptionService = new NoopExceptionService()
   ) {}
@@ -142,6 +147,8 @@ export class OrderRoutingService {
         recommendedNextStep: "send_to_operator_queue",
         domainEvents
       };
+
+      await this.orderRoutingRepository.persistDomainEvents(input.orderId, domainEvents);
 
       return escalate(output, {
         domainEvents,
@@ -214,6 +221,8 @@ export class OrderRoutingService {
         })
       );
 
+      await this.orderRoutingRepository.persistDomainEvents(input.orderId, domainEvents);
+
       return ok(output, {
         domainEvents,
         recommendedNextStep: output.recommendedNextStep
@@ -239,6 +248,8 @@ export class OrderRoutingService {
         retrySafe: submission.retrySafe
       }
     });
+
+    await this.orderRoutingRepository.persistDomainEvents(input.orderId, domainEvents);
 
     return escalate(output, {
       domainEvents,

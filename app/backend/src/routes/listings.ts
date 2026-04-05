@@ -1,11 +1,19 @@
 import { FastifyInstance } from "fastify";
+import { DatabaseUnavailableError, PostgresDatabase } from "../db/postgres";
 import {
   ChannelConstraints,
   ListingFactoryService,
   ListingGenerationInput,
+  NoopListingRepository,
   ListingProductInput,
-  ListingQualificationContext
+  ListingQualificationContext,
+  PostgresListingRepository
 } from "../modules/listing-factory";
+import { PostgresDatabaseClient } from "../shared";
+
+interface ListingRouteOptions {
+  db: PostgresDatabase;
+}
 
 const ALLOWED_QUALIFICATION_STATUSES: ListingQualificationContext["qualificationStatus"][] = [
   "approved",
@@ -201,8 +209,15 @@ function parseListingPreviewInput(body: unknown): ListingGenerationInput | null 
   };
 }
 
-export async function registerListingsRoutes(app: FastifyInstance): Promise<void> {
+export async function registerListingsRoutes(
+  app: FastifyInstance,
+  options: ListingRouteOptions
+): Promise<void> {
   const listingFactory = new ListingFactoryService();
+  const dbClient = new PostgresDatabaseClient(options.db);
+  const listingRepository = dbClient.isConfigured()
+    ? new PostgresListingRepository(dbClient)
+    : new NoopListingRepository();
 
   app.post("/v1/listings/preview", async (request, reply) => {
     const parsed = parseListingPreviewInput(request.body);
@@ -217,6 +232,44 @@ export async function registerListingsRoutes(app: FastifyInstance): Promise<void
 
     return {
       data: await listingFactory.generatePreview(parsed)
+    };
+  });
+
+  app.post("/v1/listings/generate", async (request, reply) => {
+    const parsed = parseListingPreviewInput(request.body);
+    if (!parsed) {
+      reply.code(400).send({
+        error: "invalid_listing_generate_request",
+        message:
+          "Body must include channel, normalizedProduct.productId, normalizedProduct.attributes, qualification.qualificationStatus, and qualification.listingGenerationAllowed."
+      });
+      return;
+    }
+
+    if (!dbClient.isConfigured()) {
+      throw new DatabaseUnavailableError();
+    }
+
+    const result = await listingFactory.generatePreview(parsed);
+    if (result.status === "failed") {
+      return {
+        data: result
+      };
+    }
+
+    const persistedDraft = await listingRepository.saveDraft(result.data);
+    const persistedValidation = await listingRepository.saveValidation(
+      persistedDraft.listingId,
+      result.data
+    );
+    result.data.listingId = persistedDraft.listingId;
+
+    return {
+      data: result,
+      meta: {
+        persistedDraft,
+        persistedValidation
+      }
     };
   });
 }

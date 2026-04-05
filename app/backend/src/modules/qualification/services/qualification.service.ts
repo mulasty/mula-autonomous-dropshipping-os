@@ -42,7 +42,7 @@ export class QualificationService {
         }
       }),
       createDomainEvent({
-        eventType: "rules_decision_created",
+        eventType: input.existingRuleDecision ? "rules_decision_attached" : "rules_decision_created",
         entityType: "product",
         entityId: rulesDecision.productId,
         eventSource: "qualification_service",

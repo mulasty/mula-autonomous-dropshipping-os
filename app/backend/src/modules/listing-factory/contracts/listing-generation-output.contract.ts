@@ -4,17 +4,18 @@ import { ListingValidationStatus } from "../types/listing-validation-status";
 import { ChannelConstraints } from "./channel-constraints.contract";
 
 export interface ListingSeoPackage {
-  metaTitle: string;
-  metaDescription: string;
+  meta_title: string;
+  meta_description: string;
   keywords: string[];
 }
 
-export interface ListingContentPackage {
+export interface ListingGeneratedPayload {
   title: string;
   bullets: string[];
   description: string;
   attributes: Record<string, string | number | boolean | null>;
   seo: ListingSeoPackage;
+  validation_status: ListingValidationStatus;
 }
 
 export interface ListingValidationResult {
@@ -32,11 +33,12 @@ export interface ListingContentQualitySignals {
 }
 
 export interface ListingGenerationOutput {
+  listingId?: string | null;
   productId: string;
   channel: string;
   promptVersion: string;
   listingStatus: ListingFactoryStatus;
-  content: ListingContentPackage;
+  generatedPayload: ListingGeneratedPayload;
   validation: ListingValidationResult;
   qualitySignals: ListingContentQualitySignals;
   recommendedNextStep: string;

@@ -2,6 +2,8 @@ export * from "./contracts/channel-constraints.contract";
 export * from "./contracts/listing-generation-input.contract";
 export * from "./contracts/listing-generation-output.contract";
 export * from "./default-channel-constraints";
+export * from "./repositories/listing.mapper";
+export * from "./repositories/listing.repository";
 export * from "./services/listing-content-generator.service";
 export * from "./services/listing-factory.service";
 export * from "./services/listing-validation.service";

@@ -23,6 +23,10 @@ import {
   SupplierSourceClient,
   SupplierSourceConfig
 } from "../contracts/supplier-source.contract";
+import {
+  NoopSupplierImportRepository,
+  SupplierImportRepository
+} from "../repositories/supplier-import.repository";
 import { NoopRawPayloadPersisterService, RawPayloadPersisterService } from "./raw-payload-persister.service";
 
 function createSummary(records: RawImportRecord[], parseWarnings: string[]): SupplierImportSummary {
@@ -112,6 +116,7 @@ export class SupplierIntakeService {
   constructor(
     private readonly sourceClient: SupplierSourceClient,
     private readonly payloadPersister: RawPayloadPersisterService = new NoopRawPayloadPersisterService(),
+    private readonly supplierImportRepository: SupplierImportRepository = new NoopSupplierImportRepository(),
     private readonly logger: RuntimeLogger = new NoopLogger(),
     private readonly exceptionService: ExceptionService = new NoopExceptionService()
   ) {}
@@ -137,10 +142,24 @@ export class SupplierIntakeService {
       trigger: input.trigger
     });
 
+    await this.supplierImportRepository.recordImportStarted({
+      importId,
+      supplierId: input.sourceConfig.supplierId,
+      sourceReference: null
+    });
+
     let fetchedPayload;
     try {
       fetchedPayload = await this.sourceClient.fetchSource(input.sourceConfig);
     } catch (error) {
+      await this.supplierImportRepository.recordImportCompleted({
+        importId,
+        finalStatus: "failed",
+        recordsReceived: 0,
+        recordsValid: 0,
+        recordsInvalid: 0,
+        errorSummary: "Supplier source fetch failed."
+      });
       const exception = await this.exceptionService.createException({
         entityType: "supplier_import",
         entityId: importId,
@@ -182,6 +201,14 @@ export class SupplierIntakeService {
     try {
       parsedPayload = await this.sourceClient.parsePayload(fetchedPayload, input.sourceConfig);
     } catch (error) {
+      await this.supplierImportRepository.recordImportCompleted({
+        importId,
+        finalStatus: "failed",
+        recordsReceived: 0,
+        recordsValid: 0,
+        recordsInvalid: 0,
+        errorSummary: "Supplier payload parsing failed."
+      });
       const exception = await this.exceptionService.createException({
         entityType: "supplier_import",
         entityId: importId,
@@ -244,7 +271,17 @@ export class SupplierIntakeService {
     })).rawPayloadReference;
 
     const records = prevalidateRecords(parsedPayload.rawRecords);
-    await this.payloadPersister.persistRawRecords({ importId, records });
+    const persistedRawRows = await this.supplierImportRepository.persistRawProducts({
+      importId,
+      supplierId: input.sourceConfig.supplierId,
+      records
+    });
+    const rawProductIdByRowNumber = new Map(
+      persistedRawRows.map((row) => [row.rowNumber, row.rawProductId])
+    );
+    for (const record of records) {
+      record.rawProductId = rawProductIdByRowNumber.get(record.rowNumber) ?? null;
+    }
 
     domainEvents.push(
       createDomainEvent({
@@ -253,7 +290,7 @@ export class SupplierIntakeService {
         entityId: importId,
         eventSource: "supplier_intake_service",
         payload: {
-          persistedCount: records.length
+          persistedCount: persistedRawRows.length
         }
       })
     );
@@ -281,6 +318,14 @@ export class SupplierIntakeService {
     };
 
     if (!normalizationDispatchReady) {
+      await this.supplierImportRepository.recordImportCompleted({
+        importId,
+        finalStatus,
+        recordsReceived: summary.recordsReceived,
+        recordsValid: summary.recordsAccepted,
+        recordsInvalid: summary.recordsRejected + summary.recordsReviewRequired,
+        errorSummary: "No records accepted for normalization."
+      });
       const exception = await this.exceptionService.createException({
         entityType: "supplier_import",
         entityId: importId,
@@ -302,12 +347,29 @@ export class SupplierIntakeService {
     }
 
     if (finalStatus === "partial") {
+      await this.supplierImportRepository.recordImportCompleted({
+        importId,
+        finalStatus,
+        recordsReceived: summary.recordsReceived,
+        recordsValid: summary.recordsAccepted,
+        recordsInvalid: summary.recordsRejected + summary.recordsReviewRequired,
+        errorSummary: parsedPayload.warnings.join("; ") || null
+      });
       return review(output, {
         domainEvents,
         reasonCodes: ["IMPORT_COMPLETED_WITH_WARNINGS"],
         recommendedNextStep: output.recommendedNextStep
       });
     }
+
+    await this.supplierImportRepository.recordImportCompleted({
+      importId,
+      finalStatus,
+      recordsReceived: summary.recordsReceived,
+      recordsValid: summary.recordsAccepted,
+      recordsInvalid: summary.recordsRejected + summary.recordsReviewRequired,
+      errorSummary: null
+    });
 
     return ok(output, {
       domainEvents,
