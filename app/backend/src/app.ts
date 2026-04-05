@@ -4,6 +4,7 @@ import { DatabaseUnavailableError, PostgresDatabase } from "./db/postgres";
 import { InvalidEnumFilterError } from "./modules/registry/status-registry";
 import { registerDataRoutes } from "./routes/data";
 import { registerHealthRoutes } from "./routes/health";
+import { registerListingsRoutes } from "./routes/listings";
 import { registerMetaRoutes } from "./routes/meta";
 import { registerRulesRoutes } from "./routes/rules";
 
@@ -61,7 +62,8 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
         "/v1/products",
         "/v1/orders",
         "/v1/exceptions",
-        "/v1/rules/evaluate"
+        "/v1/rules/evaluate",
+        "/v1/listings/preview"
       ]
     };
   });
@@ -70,6 +72,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   void registerMetaRoutes(app);
   void registerDataRoutes(app, options);
   void registerRulesRoutes(app);
+  void registerListingsRoutes(app);
 
   return app;
 }

@@ -22,3 +22,4 @@ Record repository-level changes that affect navigation, canonical structure, or 
 - synchronized backend registry definitions with SQL enum/status constraints and added normalized status-filter handling
 - started Phase 2 runtime implementation with a deterministic rules-engine module and evaluation endpoint
 - added Phase 3 runtime scaffolding with shared primitives plus supplier intake, qualification, and order-routing modules
+- added a deterministic listing preview runtime with prompt assets, channel constraints, validation, and `POST /v1/listings/preview`

@@ -1,3 +1,4 @@
+export * as listingFactoryModule from "./listing-factory";
 export * as orderRoutingModule from "./order-routing";
 export * as qualificationModule from "./qualification";
 export * as rulesEngineModule from "./rules-engine";
@@ -29,5 +30,10 @@ export const runtimeModuleCatalog: RuntimeModuleDescriptor[] = [
     moduleName: "order-routing",
     implementationStatus: "skeleton",
     description: "Routing orchestration with explicit supplier acknowledgement and escalation paths."
+  },
+  {
+    moduleName: "listing-factory",
+    implementationStatus: "implemented",
+    description: "Deterministic listing preview generation and validation with channel-specific constraints."
   }
 ];

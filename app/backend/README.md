@@ -35,6 +35,7 @@ Copy values from `.env.example` and set at minimum:
 - `GET /v1/orders`
 - `GET /v1/exceptions`
 - `POST /v1/rules/evaluate`
+- `POST /v1/listings/preview`
 
 ## Current design
 - metadata routes read the real repository contracts and SQL assets
@@ -45,9 +46,11 @@ Copy values from `.env.example` and set at minimum:
 - rules engine route supports deterministic phase-2 qualification checks without needing database writes yet
 - shared runtime primitives now exist for results, events, logging, config, and exceptions
 - phase-3 runtime modules are present for supplier intake, qualification, and order routing
+- listing factory preview route generates deterministic channel-aware listing content and validates publication readiness without database writes
 
 ## Next backend steps
 - add typed repository layer per domain
 - add Supabase/Postgres migration execution workflow
 - add write paths for intake, rules, and order events
+- extend the product pipeline with normalization persistence and durable qualification handoff
 - add auth and operator-safe admin endpoints

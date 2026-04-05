@@ -4,7 +4,7 @@
 Define how the repository is organized today, which files are canonical during the current documentation phase, and how the repo should evolve later without confusing contributors or Codex sessions.
 
 ## Current repository mode  
-The repository currently operates as a documentation-first workspace with initial implementation directories. Canonical documents still live at repo root, while execution assets are now starting under `db/`, `automation/`, and `app/backend/`.
+The repository currently operates as a documentation-first workspace with initial implementation directories. Canonical documents still live at repo root, while execution assets are now starting under `db/`, `automation/`, `prompts/`, and `app/backend/`.
 
 ## Current source-of-truth files  
 ### Orientation and governance  
@@ -40,6 +40,7 @@ The repository currently operates as a documentation-first workspace with initia
 - db/views/  
 - db/seeds/  
 - automation/contracts/  
+- prompts/listing_generation/  
 - app/backend/
 
 ## Working rules during the current phase  
